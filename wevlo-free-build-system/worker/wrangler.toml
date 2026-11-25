@@ -1,0 +1,10 @@
+name = "wevlo-build-api"
+main = "src/index.js"
+compatibility_date = "2026-11-26"
+
+[vars]
+FIREBASE_PROJECT_ID = "REPLACE_WITH_FIREBASE_PROJECT_ID"
+GH_OWNER = "siftifybd"
+GH_REPO = "-wevlo-android-builder"
+GH_BRANCH = "main"
+ALLOWED_ORIGIN = "https://REPLACE_WITH_YOUR_WEVLO_DOMAIN"

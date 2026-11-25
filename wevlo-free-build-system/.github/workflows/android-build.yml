@@ -1,0 +1,95 @@
+name: WEVLO Android Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Build input: url or zip"
+        required: true
+        type: choice
+        options: [url, zip]
+      website_url:
+        description: "HTTPS website URL (mode=url)"
+        required: false
+        type: string
+      website_zip_url:
+        description: "Direct HTTPS ZIP URL (mode=zip)"
+        required: false
+        type: string
+      app_name:
+        description: "Android app display name"
+        required: true
+        default: "My Website"
+        type: string
+      package_name:
+        description: "Android package ID"
+        required: true
+        default: "com.example.mywebsite"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wevlo-build-${{ github.actor }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate Android project
+        env:
+          BUILD_MODE: ${{ inputs.mode }}
+          WEBSITE_URL: ${{ inputs.website_url }}
+          WEBSITE_ZIP_URL: ${{ inputs.website_zip_url }}
+          APP_NAME: ${{ inputs.app_name }}
+          PACKAGE_NAME: ${{ inputs.package_name }}
+        run: python scripts/generate_android_project.py
+
+      - name: Build debug APK
+        working-directory: generated-android
+        run: gradle --no-daemon --stacktrace assembleDebug
+
+      - name: Package Android Studio project
+        run: |
+          cd generated-android
+          zip -qr ../wevlo-android-studio-project.zip . -x ".gradle/*" "app/build/*" "build/*"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wevlo-debug-apk
+          path: generated-android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Android Studio source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: wevlo-android-studio-project
+          path: wevlo-android-studio-project.zip
+          if-no-files-found: error
+          retention-days: 7
